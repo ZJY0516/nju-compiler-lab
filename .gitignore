@@ -1,0 +1,8 @@
+*
+*.*
+!main.c
+!lexical.l
+!syntax.y
+!tree.h
+!Makefile
+!.gitignore
