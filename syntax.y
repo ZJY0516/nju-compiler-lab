@@ -62,6 +62,7 @@ ExtDefList: ExtDef ExtDefList{$$ = new_node("ExtDefList", @$.first_line, $1, $2,
 ExtDef: Specifier ExtDecList SEMI{$$ = new_node("ExtDef", @$.first_line, $1, $2,$3,NULL);}
       | Specifier SEMI{$$ = new_node("ExtDef", @$.first_line, $1, $2,NULL);}
       | Specifier FunDec CompSt{$$ = new_node("ExtDef", @$.first_line, $1, $2,$3,NULL);}/*不能只有函数声明？*/
+      | Specifier FunDec SEMI{$$ = new_node("ExtDef", @$.first_line, $1,$2,$3,NULL);}
       | error SEMI{ error = true; }
       ;
 ExtDecList: VarDec{$$ = new_node("ExtDecList", @$.first_line, $1,NULL);}

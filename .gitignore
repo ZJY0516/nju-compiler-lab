@@ -6,3 +6,5 @@
 !tree.h
 !Makefile
 !.gitignore
+!semantic.h
+!semantic.c

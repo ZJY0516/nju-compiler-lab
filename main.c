@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "semantic.h"
 
 // bool lex_error = false;
 // bool syntax_error = false;
@@ -28,6 +29,7 @@ int main(int argc, char **argv)
     yyparse();
     if (!error) {
         print_tree(root, 0);
+        semantic_analysis(root);
     }
     return 0;
 }
