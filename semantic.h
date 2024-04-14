@@ -7,12 +7,15 @@
 #include "tree.h"
 
 #define HASH_SIZE 0x3fff
+#define DEPTH 40
 
 typedef struct Type_ Type;
 typedef struct FieldList_ FieldList;
 typedef struct _var_hash_node var_hash_node;
 typedef struct _func_type func_type;
 typedef struct _func_hash_node func_hash_node;
+typedef struct _var_list_node var_list_node;
+typedef struct _var_list_stack var_list_stack;
 
 enum { INT_TYPE = 1, FLOAT_TYPE };
 enum {
@@ -63,6 +66,16 @@ struct _func_hash_node {
     func_type *func;
     func_hash_node *next;
     func_hash_node *pre; // Do we really need this?
+};
+
+struct _var_list_node {
+    var_hash_node *node;
+    var_list_node *next;
+};
+
+struct _var_list_stack {
+    var_list_node *head;
+    var_list_node *tail;
 };
 
 #define CHECK(node, correct_name)                                              \

@@ -2,6 +2,56 @@
 
 var_hash_node *var_hash_table[HASH_SIZE + 1] = {NULL};
 func_hash_node *func_hash_table[HASH_SIZE + 1] = {NULL};
+var_list_stack var_stack[DEPTH];
+int current_depth = 0;
+
+void init()
+{
+    for (int i = 0; i < DEPTH; i++) {
+        var_stack[i].head = var_stack[i].tail = NULL;
+    }
+}
+
+void handle_scope(var_hash_node *node)
+{
+    var_list_stack *cur = &var_stack[current_depth];
+    var_list_node *list_node = malloc(sizeof(var_list_node));
+    list_node->next = NULL;
+    list_node->node = node;
+    if (cur->head == NULL) {
+        cur->head = list_node;
+        cur->tail = list_node;
+    } else {
+        cur->tail->next = list_node;
+        cur->tail = list_node;
+    }
+}
+
+void delete_val(var_hash_node *node)
+{
+    int id = hash_func(node->name);
+    if (node->last == NULL) {
+        var_hash_table[id] = node->next;
+    } else {
+        node->last->next = node->next;
+        if (node->next) {
+            node->next->last = node->last;
+        }
+    }
+    free(node);
+}
+
+void delete_stack()
+{
+    var_list_node *head = var_stack[current_depth].head;
+    while (head) {
+        delete_val(head->node);
+        head = head->next;
+    }
+    var_stack[current_depth].head = NULL;
+    var_stack[current_depth].tail = NULL;
+    current_depth--;
+}
 
 static inline int get_child_num(Node *node)
 {
@@ -183,6 +233,7 @@ void ExtDef(Node *node)
         if (strcmp(get_child(node, 2)->name, "SEMI") == 0) {
             FunDec(get_child(node, 1), type, DECLARATION);
         } else if (strcmp(get_child(node, 2)->name, "CompSt") == 0) {
+            current_depth++;
             FunDec(get_child(node, 1), type, DEFINITION);
             CompSt(get_child(node, 2), type, true);
         } else
@@ -295,7 +346,15 @@ Type *StructSpecifier(Node *node)
                         }
                     }
                 } else if (get_child_num(dec) == 3) {
+                    FieldList *field = Struct_VarDec(vardec, basic_type);
                     semantic_error(15, get_child(dec, 1)->line, NULL);
+                    if (cur == NULL) {
+                        cur = field;
+                        type->u.structure = cur;
+                    } else {
+                        cur->next = field;
+                        cur = cur->next;
+                    }
                 } else
                     assert(0);
 
@@ -357,6 +416,14 @@ Type *StructSpecifier(Node *node)
                     }
                 } else if (get_child_num(dec) == 3) {
                     semantic_error(15, get_child(dec, 1)->line, NULL);
+                    FieldList *field = Struct_VarDec(vardec, basic_type);
+                    if (cur == NULL) {
+                        cur = field;
+                        type->u.structure = cur;
+                    } else {
+                        cur->next = field;
+                        cur = cur->next;
+                    }
                 } else
                     assert(0);
 
@@ -474,6 +541,8 @@ void CompSt(Node *node, Type *type, bool is_func_compst)
     */
     // maybe Deflist and StmtList are empty
     CHECK(node, "CompSt");
+    if (!is_func_compst)
+        current_depth++;
     if (strcmp(get_child(node, 1)->name, "DefList") == 0) {
         DefList(get_child(node, 1));
         Node *StmtList_node = get_child(node, 2);
@@ -498,6 +567,7 @@ void CompSt(Node *node, Type *type, bool is_func_compst)
             StmtList_node = get_child(StmtList_node, 1);
         }
     }
+    delete_stack(); //?????
 }
 
 // input: node and basic type.
@@ -656,9 +726,18 @@ void add_var(char *name, int line, Type *type)
     unsigned int hash_val = hash_func(name);
     var_hash_node *var_node = var_hash_table[hash_val];
     while (var_node != NULL) {
+        // if (strcmp(var_node->name, name) == 0) {
+        //     semantic_error(3, line, name);
+        //     return;
+        // }
         if (strcmp(var_node->name, name) == 0) {
-            semantic_error(3, line, name);
-            return;
+            if (var_node->type->kind == STRUCTURE) {
+                semantic_error(3, line, name);
+            }
+            if (var_node->depth == current_depth) {
+                semantic_error(3, line, name);
+                return;
+            }
         }
         var_node = var_node->next;
     }
@@ -666,8 +745,10 @@ void add_var(char *name, int line, Type *type)
     var_node->name = name;
     var_node->lineno = line;
     var_node->type = type;
+    var_node->depth = current_depth;
     var_node->next = var_hash_table[hash_val];
     var_hash_table[hash_val] = var_node;
+    handle_scope(var_node);
 }
 
 // add function to hash table
@@ -723,6 +804,17 @@ Type *exp_type(Node *node)
         Node *child = get_child(node, 0);
         if (strcmp(child->name, "ID") == 0) {
             var_hash_node *var_node = get_var_hash_node(child->value);
+            // var_hash_node *backup = var_node;
+            // for (int i = 0; i < DEPTH; i++) {
+            //     var_node = backup;
+            //     while (var_node != NULL) {
+            //         if (strcmp(var_node->name, child->value) == 0 &&
+            //             current_depth == var_node->depth + i) {
+            //             return var_node->type;
+            //         }
+            //         var_node = var_node->next;
+            //     }
+            // }
             if (var_node == NULL) {
                 semantic_error(1, child->line, child->value);
                 return NULL;
@@ -980,6 +1072,7 @@ void semantic_error(int error_type, int lineno, char *name)
 
 void semantic_analysis(Node *root)
 {
+    init();
     traversal(root);
     finish();
 }

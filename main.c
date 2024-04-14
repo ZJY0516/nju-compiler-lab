@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     // yydebug = 1;
     yyparse();
     if (!error) {
-        print_tree(root, 0);
+        // print_tree(root, 0);
         semantic_analysis(root);
     }
     return 0;
