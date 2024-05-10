@@ -1,6 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
+#include "ir.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@ typedef struct node {
     char *name;
     char *value;
     bool visited;
+    bool ir_code_visited;
     bool need_print;
     // for example, name: ID, value: "a"
     struct node *child;

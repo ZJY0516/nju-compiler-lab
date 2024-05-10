@@ -80,7 +80,7 @@ WHITESPACE [ \t]
 {DOT} { yylval.node=new_token("DOT",NULL,yylineno); return DOT;}
 {NOT} { yylval.node=new_token("NOT",NULL,yylineno); return NOT;}
 {STRING} { yylval.node=new_token("STRING",yytext,yylineno);return STRING;}
-{RELOP} { yylval.node=new_token("RELOP",NULL,yylineno);return RELOP; } 
+{RELOP} { yylval.node=new_token("RELOP",yytext,yylineno);return RELOP; } 
 \n {yycolumn=1;}
 {WHITESPACE} { /* ignore whitespace */ }
 

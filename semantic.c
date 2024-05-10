@@ -1,12 +1,93 @@
 #include "semantic.h"
+#include <assert.h>
+#include <stdio.h>
+
+unsigned int hash_func(char *name);
+bool type_eq(Type *a, Type *b);
+bool func_eq(func_type *a, func_type *b);
+bool field_eq(FieldList *a, FieldList *b);
+bool field_eq_args(FieldList *list, Node *args);
+
+void add_var(char *name, int line, Type *type);
+void add_func(char *name, int line, Type *return_type, FieldList *args,
+              bool defined);
+
+void ExtDef(Node *node);
+void DefList(Node *node);
+Type *Specifier(Node *node);
+Type *StructSpecifier(Node *node);
+Type *VarDec(Node *node, Type *basic_type);
+void FunDec(Node *node, Type *return_type, int definition);
+void CompSt(Node *node, Type *type, bool is_func_compst);
+void Stmt(Node *node, Type *type);
+FieldList *VarList(Node *node, bool definition);
+FieldList *ParamDec(Node *node, bool definition);
+Type *StructSpecifier(Node *node);
+FieldList *Struct_VarDec(Node *node, Type *basic_type);
+void Def(Node *node);
+
+void semantic_error(int error_type, int lineno, char *name);
+
+Type *basic_type(int type);
+Type *exp_type(Node *node);
+
+bool redefined_in_FL(FieldList *fl, char *name);
+Type *func_exp(Node *node);
+
+void traversal(Node *node);
+void handle(Node *node);
+void finish();
+void add_opt_tag(Node *node, Type *type);
 
 var_hash_node *var_hash_table[HASH_SIZE + 1] = {NULL};
 func_hash_node *func_hash_table[HASH_SIZE + 1] = {NULL};
 var_list_stack var_stack[DEPTH];
 int current_depth = 0;
 
+int get_child_num(Node *node)
+{
+    int num = 0;
+    Node *tmp = node->child;
+    while (tmp != NULL) {
+        num++;
+        tmp = tmp->sibling;
+    }
+    return num;
+}
+
+// return child of node
+// get_child(node, 0) == node->child
+// get_child(node, 1) == node->child->sibling
+Node *get_child(Node *node, int n)
+{
+    assert(node != NULL);
+    Node *child = node->child;
+    while (n-- && child != NULL)
+        child = child->sibling;
+    return child;
+}
+
+void add_write()
+{
+    Type *return_type = basic_type(INT_TYPE);
+    FieldList *args = (FieldList *)malloc(sizeof(FieldList));
+    args->type = basic_type(INT_TYPE);
+    args->name = "n";
+    args->next = NULL;
+    add_func("write", -1, return_type, args, true);
+}
+
+void add_read()
+{
+    Type *return_type = basic_type(INT_TYPE);
+    FieldList *args = NULL;
+    add_func("read", -1, return_type, args, true);
+}
+
 void init()
 {
+    add_read();
+    add_write();
     for (int i = 0; i < DEPTH; i++) {
         var_stack[i].head = var_stack[i].tail = NULL;
     }
@@ -29,39 +110,29 @@ void handle_scope(var_hash_node *node)
 
 void delete_val(var_hash_node *node)
 {
-    int id = hash_func(node->name);
-    if (node->last == NULL) {
-        var_hash_table[id] = node->next;
-    } else {
-        node->last->next = node->next;
-        if (node->next) {
-            node->next->last = node->last;
-        }
-    }
-    free(node);
+    // int id = hash_func(node->name);
+    // if (node->last == NULL) {
+    //     var_hash_table[id] = node->next;
+    // } else {
+    //     node->last->next = node->next;
+    //     if (node->next) {
+    //         node->next->last = node->last;
+    //     }
+    // }
+    // printf("delete %s\n", node->name);
+    // free(node);
 }
 
 void delete_stack()
 {
-    var_list_node *head = var_stack[current_depth].head;
-    while (head) {
-        delete_val(head->node);
-        head = head->next;
-    }
-    var_stack[current_depth].head = NULL;
-    var_stack[current_depth].tail = NULL;
-    current_depth--;
-}
-
-static inline int get_child_num(Node *node)
-{
-    int num = 0;
-    Node *tmp = node->child;
-    while (tmp != NULL) {
-        num++;
-        tmp = tmp->sibling;
-    }
-    return num;
+    // var_list_node *head = var_stack[current_depth].head;
+    // while (head) {
+    //     delete_val(head->node);
+    //     head = head->next;
+    // }
+    // var_stack[current_depth].head = NULL;
+    // var_stack[current_depth].tail = NULL;
+    // current_depth--;
 }
 
 Node *get_id_node(Node *Vardec)
@@ -121,6 +192,7 @@ var_hash_node *get_var_hash_node(char *key)
     int id = hash_func(key);
     var_hash_node *tmp = var_hash_table[id];
     var_hash_node *ans = NULL;
+    // assert(tmp);
     while (tmp != NULL) {
         if (strcmp(key, tmp->name) == 0) {
             ans = tmp;
@@ -139,6 +211,8 @@ func_hash_node *get_func_hash_node(char *key)
     func_hash_node *tmp = func_hash_table[id];
     func_hash_node *ans = NULL;
     while (tmp != NULL) {
+        assert(tmp->func);
+        assert(tmp->func->name);
         if (strcmp(key, tmp->func->name) == 0) {
             ans = tmp;
             return ans;
@@ -748,7 +822,7 @@ void add_var(char *name, int line, Type *type)
     var_node->depth = current_depth;
     var_node->next = var_hash_table[hash_val];
     var_hash_table[hash_val] = var_node;
-    handle_scope(var_node);
+    // handle_scope(var_node);
 }
 
 // add function to hash table
@@ -781,18 +855,6 @@ void add_func(char *name, int line, Type *return_type, FieldList *args,
         temp->next = func_node;
         func_node->pre = temp;
     }
-}
-
-// return child of node
-// get_child(node, 0) == node->child
-// get_child(node, 1) == node->child->sibling
-static inline Node *get_child(Node *node, int n)
-{
-    assert(node != NULL);
-    Node *child = node->child;
-    while (n-- && child != NULL)
-        child = child->sibling;
-    return child;
 }
 
 Type *exp_type(Node *node)
@@ -1111,7 +1173,7 @@ void finish()
                 if (tmp->func->wheather_defined == false)
                     semantic_error(18, tmp->func->line, tmp->func->name);
                 func_hash_node *next = tmp->next;
-                free(tmp);
+                // free(tmp);
                 tmp = next;
             }
         }

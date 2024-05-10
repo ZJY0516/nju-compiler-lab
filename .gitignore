@@ -8,3 +8,5 @@
 !.gitignore
 !semantic.h
 !semantic.c
+!ir.c
+!ir.h

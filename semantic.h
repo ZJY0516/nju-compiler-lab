@@ -17,6 +17,8 @@ typedef struct _func_hash_node func_hash_node;
 typedef struct _var_list_node var_list_node;
 typedef struct _var_list_stack var_list_stack;
 
+typedef struct _Operand Operand;
+
 enum { INT_TYPE = 1, FLOAT_TYPE };
 enum {
     DECLARATION,
@@ -51,6 +53,7 @@ struct _var_hash_node {
     Type *type;
     var_hash_node *next;
     var_hash_node *last;
+    Operand *op;
 };
 
 struct _func_type {
@@ -92,46 +95,13 @@ struct _var_list_stack {
         }                                                                      \
     } while (0)
 
-unsigned int hash_func(char *name);
 void semantic_analysis(Node *root);
-bool type_eq(Type *a, Type *b);
-bool func_eq(func_type *a, func_type *b);
-bool field_eq(FieldList *a, FieldList *b);
-bool field_eq_args(FieldList *list, Node *args);
-
-static inline Node *get_child(Node *node, int n);
-static inline int get_child_num(Node *node);
-
-void add_var(char *name, int line, Type *type);
-void add_func(char *name, int line, Type *return_type, FieldList *args,
-              bool defined);
-
-void ExtDef(Node *node);
-void DefList(Node *node);
-Type *Specifier(Node *node);
-Type *StructSpecifier(Node *node);
-Type *VarDec(Node *node, Type *basic_type);
-void FunDec(Node *node, Type *return_type, int definition);
-void CompSt(Node *node, Type *type, bool is_func_compst);
-void Stmt(Node *node, Type *type);
-FieldList *VarList(Node *node, bool definition);
-FieldList *ParamDec(Node *node, bool definition);
-Type *StructSpecifier(Node *node);
-FieldList *Struct_VarDec(Node *node, Type *basic_type);
-void Def(Node *node);
-
-void semantic_error(int error_type, int lineno, char *name);
-
-Type *basic_type(int type);
+func_hash_node *get_func_hash_node(char *key);
+var_hash_node *get_var_hash_node(char *key);
+Node *get_id_node(Node *Vardec);
 Type *exp_type(Node *node);
-
-bool redefined_in_FL(FieldList *fl, char *name);
-Type *func_exp(Node *node);
-
-void traversal(Node *node);
-void handle(Node *node);
-void finish();
-void add_opt_tag(Node *node, Type *type);
+// int get_child_num(Node *node);
+// Node *get_child(Node *node, int n);
 
 // debug
 #define RESET "\033[0m"     // 重置所有属性
