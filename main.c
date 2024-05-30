@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "semantic.h"
 #include "ir.h"
+#include "mips.h"
 
 // bool lex_error = false;
 // bool syntax_error = false;
@@ -34,8 +35,10 @@ int main(int argc, char **argv)
     }
     if (argc == 2) {
         gen_intercode("out.ir");
+        gen_assembly_code("test.s");
     } else {
-        gen_intercode(argv[2]);
+        gen_intercode("out.ir");
+        gen_assembly_code(argv[2]);
     }
     return 0;
 }

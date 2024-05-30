@@ -10,3 +10,5 @@
 !semantic.c
 !ir.c
 !ir.h
+!mips.c
+!mips.h
